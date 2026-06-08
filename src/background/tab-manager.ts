@@ -1,7 +1,9 @@
+const api = (typeof browser !== 'undefined' ? browser : chrome) as typeof browser;
+
 let backgroundTabId: number | null = null;
 
 export async function createBackgroundTab(url: string): Promise<number> {
-  const tab = await browser.tabs.create({ url, active: false });
+  const tab = await api.tabs.create({ url, active: false });
   backgroundTabId = tab.id!;
   await waitForTabLoad(backgroundTabId);
   return backgroundTabId;
@@ -13,14 +15,14 @@ export async function navigateTab(url: string): Promise<void> {
     return;
   }
 
-  await browser.tabs.update(backgroundTabId, { url });
+  await api.tabs.update(backgroundTabId, { url });
   await waitForTabLoad(backgroundTabId);
 }
 
 export async function closeBackgroundTab(): Promise<void> {
   if (backgroundTabId) {
     try {
-      await browser.tabs.remove(backgroundTabId);
+      await api.tabs.remove(backgroundTabId);
     } catch {
       // tab might already be closed
     }
@@ -39,14 +41,14 @@ export async function captureTabContent(
   if (!backgroundTabId) throw new Error('No background tab');
 
   // Wait for content readiness
-  await browser.tabs.sendMessage(backgroundTabId, {
+  await api.tabs.sendMessage(backgroundTabId, {
     type: 'content.waitForReady',
     contentSelector,
     timeout,
   });
 
   // Get DOM snapshot
-  const response = await browser.tabs.sendMessage(backgroundTabId, {
+  const response = await api.tabs.sendMessage(backgroundTabId, {
     type: 'content.getSnapshot',
   });
 
@@ -60,22 +62,22 @@ export async function captureTabContent(
 function waitForTabLoad(tabId: number): Promise<void> {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
-      browser.tabs.onUpdated.removeListener(listener);
+      api.tabs.onUpdated.removeListener(listener);
       resolve(); // timeout = proceed anyway
     }, 30000);
 
     function listener(
       updatedTabId: number,
-      changeInfo: browser.tabs._OnUpdatedChangeInfo
+      changeInfo: api.tabs._OnUpdatedChangeInfo
     ) {
       if (updatedTabId === tabId && changeInfo.status === 'complete') {
         clearTimeout(timeout);
-        browser.tabs.onUpdated.removeListener(listener);
+        api.tabs.onUpdated.removeListener(listener);
         // Give a small delay for scripts to initialize
         setTimeout(resolve, 500);
       }
     }
 
-    browser.tabs.onUpdated.addListener(listener);
+    api.tabs.onUpdated.addListener(listener);
   });
 }

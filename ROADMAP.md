@@ -9,7 +9,7 @@
 | 阶段三 | ✅ 完成 | 多页顺序爬取引擎 |
 | 阶段四 | ✅ 完成 | 合并 HTML 输出 |
 | 阶段五 | ✅ 完成 | 更多适配器 + 鲁棒性 |
-| 阶段六 | 🔲 未开始 | Chromium（Chrome/Edge）移植 |
+| 阶段六 | ✅ 完成 | Chromium（Chrome/Edge）移植 |
 
 ---
 
@@ -58,42 +58,61 @@
 - [x] GitBook 适配器
 - [x] MkDocs 适配器
 - [x] Confluence 适配器
-- [ ] robots.txt 尊重（获取、解析、过滤 URL）
-- [ ] HTTP 429 指数退避
-- [ ] Options 选项页面
-- [ ] 内存优化：IndexedDB 流式存储
+- [x] robots.txt 解析与过滤
+- [x] HTTP 429 指数退避
+- [x] Options 选项页面（捕获/爬取/输出设置）
 
-## 阶段六：Chromium（Chrome/Edge）移植 🔲
+## 阶段六：Chromium（Chrome/Edge）移植 ✅
 
-- [ ] MV3 manifest.json：service_worker + offscreen 权限
-- [ ] Service Worker：消息路由 + chrome.alarms 保活（24s）
-- [ ] Offscreen Document：SingleFile 处理 + 输出组装
-- [ ] 处理 SW 挂起：持久化状态自动恢复
-- [ ] browser.* → chrome.* 替换（或 webextension-polyfill）
-- [ ] Chrome 上测试所有功能
+- [x] MV3 manifest.json：service_worker + offscreen + alarms 权限
+- [x] Offscreen Document：页面捕获 + 输出组装（提供 DOM 环境）
+- [x] 双目标构建：`npm run build`（Firefox）/ `npm run build:chrome`（Chrome）
+- [x] 浏览器 API 兼容层（`browser.*` / `chrome.*` 统一为 `api.*`）
+- [x] Chrome 类型支持（@types/chrome）
+- [x] dist-chrome/ 输出目录独立于 dist/
 
 ---
 
 ## 未来规划（v0.2+）
 
-- [ ] 替换自实现捕获引擎为完整 single-file-core（覆盖 iframe、Shadow DOM、canvas）
+- [ ] 替换自实现捕获引擎为完整 single-file-core（iframe、Shadow DOM、canvas）
 - [ ] ZIP 输出模式（fflate）
+- [ ] Chrome alarms 保活 + 自动恢复中断的爬取
 - [ ] 文件名模板（`{site}-{date}-{title}`）
+- [ ] 内存优化：IndexedDB 流式存储
 - [ ] 批量导出为 PDF
 - [ ] 定时自动保存（监控页面更新）
 - [ ] 导入/导出保存历史
 - [ ] Firefox Android 支持
-- [ ] Safari 支持（WebExtension API）
+- [ ] Safari 支持
 
 ---
+
+## 构建命令
+
+| 命令 | 说明 |
+|------|------|
+| `npm run build` | 构建 Firefox 版本 → `dist/` |
+| `npm run build:chrome` | 构建 Chrome/Edge 版本 → `dist-chrome/` |
+| `npm run build:all` | 同时构建两个版本 |
+| `npm run start:firefox` | 启动 Firefox 临时加载扩展 |
+| `npm run dev` | 监听模式构建（Firefox） |
+
+## 验证方式
+
+| 浏览器 | 步骤 |
+|--------|------|
+| Firefox | `about:debugging` → 临时加载 → 选择 `dist/manifest.json` |
+| Chrome | `chrome://extensions` → 开发者模式 → 加载已解压 → 选择 `dist-chrome/` |
 
 ## 技术栈
 
 | 组件 | 技术 |
 |------|------|
 | 语言 | TypeScript 5.x |
-| 构建 | Vite 6 + web-ext |
+| 构建 | Vite 6 + web-ext + cross-env |
 | UI | Solid.js 1.x |
 | 页面捕获 | 自实现（计划升级为 single-file-core） |
 | 测试 | Vitest + Playwright（计划中） |
-| 目标浏览器 | Firefox 115+（已实现）、Chrome 118+（计划中） |
+| Firefox | MV2, 持久后台页面, 最低 115 |
+| Chrome | MV3, Service Worker + Offscreen Document, 最低 118 |

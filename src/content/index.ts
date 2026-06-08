@@ -1,17 +1,19 @@
 import type { SaveItMessage } from '@/shared/messages';
 import { discoverNavigation } from './nav-discovery';
 
+const api = (typeof browser !== 'undefined' ? browser : chrome) as typeof browser;
+
 // Inject MAIN world script for pushState hooks and globals extraction
 injectMainWorldScript();
 
 function injectMainWorldScript() {
   const script = document.createElement('script');
-  script.src = browser.runtime.getURL('injected.js');
+  script.src = api.runtime.getURL('injected.js');
   script.onload = () => script.remove();
   (document.head || document.documentElement).appendChild(script);
 }
 
-browser.runtime.onMessage.addListener(
+api.runtime.onMessage.addListener(
   (message: SaveItMessage, _sender, sendResponse) => {
     switch (message.type) {
       case 'content.getSnapshot':

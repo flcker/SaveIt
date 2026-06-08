@@ -1,5 +1,8 @@
 import type { SaveItMessage } from '@/shared/messages';
 import { saveCurrentPage } from './page-capture';
+import { fetchRobotsTxt, isUrlAllowed, getCrawlDelay } from './robots-txt';
+
+const api = (typeof browser !== 'undefined' ? browser : chrome) as typeof browser;
 import {
   createTask,
   getNextUrl,
@@ -21,7 +24,7 @@ import {
   captureTabContent,
 } from './tab-manager';
 
-browser.runtime.onMessage.addListener(
+api.runtime.onMessage.addListener(
   (message: SaveItMessage, _sender, sendResponse) => {
     switch (message.type) {
       case 'popup.savePage':
@@ -65,14 +68,14 @@ loadPersistedTask().then((task) => {
 });
 
 async function handleSavePage() {
-  const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+  const tabs = await api.tabs.query({ active: true, currentWindow: true });
   const tab = tabs[0];
   if (!tab?.id) throw new Error('No active tab');
 
   notifyPopup({ type: 'bg.status', status: 'capturing' });
 
   try {
-    const response = await browser.tabs.sendMessage(tab.id, {
+    const response = await api.tabs.sendMessage(tab.id, {
       type: 'content.getSnapshot',
     });
 
@@ -102,7 +105,7 @@ async function handleSavePage() {
 }
 
 async function handleStartCrawl(selectedUrls: string[]) {
-  const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+  const tabs = await api.tabs.query({ active: true, currentWindow: true });
   const rootUrl = tabs[0]?.url || '';
 
   createTask(rootUrl, selectedUrls);
@@ -122,6 +125,7 @@ async function runCrawlLoop() {
     }
 
     await createBackgroundTab(firstUrl);
+    let retryBackoff = 1000;
 
     while (true) {
       const currentTask = getCurrentTask();
@@ -138,6 +142,14 @@ async function runCrawlLoop() {
         total: prog.total,
         currentUrl: url,
       });
+
+      // Check robots.txt
+      const origin = new URL(url).origin;
+      const rules = await fetchRobotsTxt(origin);
+      if (!isUrlAllowed(url, rules)) {
+        markPageFailed(url, 'Blocked by robots.txt');
+        continue;
+      }
 
       try {
         // Navigate to page
@@ -162,12 +174,21 @@ async function runCrawlLoop() {
           capturedAt: Date.now(),
           sizeBytes: result.content.length,
         });
+
+        retryBackoff = 1000;
       } catch (err) {
-        markPageFailed(url, String(err));
+        const errStr = String(err);
+        // Handle HTTP 429 with exponential backoff
+        if (errStr.includes('429') || errStr.includes('Too Many Requests')) {
+          retryBackoff = Math.min(retryBackoff * 2, 30000);
+          await sleep(retryBackoff);
+        }
+        markPageFailed(url, errStr);
       }
 
-      // Random delay between pages (1-3s)
-      const delay = 1000 + Math.random() * 2000;
+      // Respect Crawl-delay from robots.txt, or use default random delay
+      const crawlDelay = getCrawlDelay(rules);
+      const delay = crawlDelay ? crawlDelay * 1000 : 1000 + Math.random() * 2000;
       await sleep(delay);
     }
 
@@ -229,7 +250,7 @@ async function downloadHtml(content: string, filename: string) {
   const url = URL.createObjectURL(blob);
 
   try {
-    await browser.downloads.download({
+    await api.downloads.download({
       url,
       filename,
       saveAs: true,
@@ -240,7 +261,7 @@ async function downloadHtml(content: string, filename: string) {
 }
 
 function notifyPopup(message: SaveItMessage) {
-  browser.runtime.sendMessage(message).catch(() => {});
+  api.runtime.sendMessage(message).catch(() => {});
 }
 
 function sleep(ms: number): Promise<void> {

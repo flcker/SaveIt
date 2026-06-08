@@ -8,6 +8,8 @@
   "scripts": {
     "dev": "vite build --watch --mode development",
     "build": "vite build",
+    "build:chrome": "cross-env TARGET=chrome vite build",
+    "build:all": "vite build && cross-env TARGET=chrome vite build",
     "start:firefox": "web-ext run --source-dir dist",
     "icons": "tsx scripts/generate-icons.ts",
     "test": "vitest",
@@ -17,8 +19,9 @@
     "solid-js": "^1.9.0"
   },
   "devDependencies": {
-    "@anthropic-ai/sdk": "^0.39.0",
+    "@types/chrome": "^0.0.270",
     "@types/firefox-webext-browser": "^120.0.0",
+    "cross-env": "^7.0.3",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0",
     "vite": "^6.0.0",

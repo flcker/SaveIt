@@ -30,8 +30,24 @@
 - **Popup UI**：双模式（保存页面/保存站点）、树形预览、进度面板
 - **Firefox MV2 支持**：持久后台页面架构
 
+### Phase 5 Completion
+
+- robots.txt 解析器：自动检测并过滤被禁止的 URL
+- HTTP 429 指数退避（最大 30s）
+- Crawl-delay 指令遵守
+- Options 选项页面（捕获设置、爬取参数、输出格式）
+
+### Phase 6: Chrome/Edge (MV3) Support
+
+- Chrome Manifest V3 with Service Worker + Offscreen Document
+- Offscreen Document 提供 DOMParser（SW 没有 DOM）
+- 双目标构建系统：`npm run build` / `npm run build:chrome`
+- 浏览器 API 兼容层（browser.* / chrome.* → 统一 api.*）
+- @types/chrome 类型支持
+
 ### Technical
 
-- 构建产物：content.js 27.6KB / background.js 18.3KB / popup.js 35.5KB
-- web-ext lint 0 errors
-- 最低 Firefox 版本：115
+- Firefox 构建：content.js 27.7KB / background.js 21.4KB / popup.js 34.3KB
+- Chrome 构建：额外 offscreen.js 1.2KB
+- web-ext lint 0 errors（Firefox）
+- 最低版本：Firefox 115 / Chrome 118

@@ -1,22 +1,25 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "SaveIt",
   "version": "0.1.0",
   "description": "Save web pages as single HTML files with multi-level navigation support",
   "author": "SaveIt Contributors",
-  "homepage_url": "https://github.com/user/saveit",
 
   "permissions": [
-    "<all_urls>",
     "activeTab",
     "downloads",
     "storage",
-    "tabs"
+    "tabs",
+    "scripting",
+    "offscreen",
+    "alarms"
   ],
 
+  "host_permissions": ["<all_urls>"],
+
   "background": {
-    "page": "background.html",
-    "persistent": true
+    "service_worker": "background.js",
+    "type": "module"
   },
 
   "content_scripts": [
@@ -28,7 +31,7 @@
     }
   ],
 
-  "browser_action": {
+  "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {
       "16": "icons/icon-16.png",
@@ -38,6 +41,11 @@
     "default_title": "SaveIt"
   },
 
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_new_tab": true
+  },
+
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",
@@ -45,19 +53,10 @@
     "128": "icons/icon-128.png"
   },
 
-  "options_ui": {
-    "page": "options/options.html",
-    "open_in_tab": true
-  },
-
   "web_accessible_resources": [
-    "injected.js"
-  ],
-
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "saveit@extension",
-      "strict_min_version": "115.0"
+    {
+      "resources": ["injected.js"],
+      "matches": ["<all_urls>"]
     }
-  }
+  ]
 }

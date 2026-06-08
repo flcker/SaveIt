@@ -3,6 +3,8 @@ import { createSignal, Show, For, createEffect } from 'solid-js';
 import type { SaveItMessage } from '@/shared/messages';
 import type { NavNode } from '@/shared/types';
 
+const api = (typeof browser !== 'undefined' ? browser : chrome) as typeof browser;
+
 type Mode = 'page' | 'site';
 type Status = 'idle' | 'discovering' | 'previewing' | 'capturing' | 'crawling' | 'done' | 'error';
 
@@ -13,7 +15,7 @@ function App() {
   const [navTree, setNavTree] = createSignal<NavNode[]>([]);
   const [progress, setProgress] = createSignal({ completed: 0, total: 0, currentUrl: '' });
 
-  browser.runtime.onMessage.addListener((msg: SaveItMessage) => {
+  api.runtime.onMessage.addListener((msg: SaveItMessage) => {
     switch (msg.type) {
       case 'bg.status':
         setStatus('capturing');
@@ -37,7 +39,7 @@ function App() {
     setStatus('capturing');
     setMessage('正在捕获页面...');
     try {
-      await browser.runtime.sendMessage({ type: 'popup.savePage' });
+      await api.runtime.sendMessage({ type: 'popup.savePage' });
     } catch (err) {
       setStatus('error');
       setMessage(`错误: ${err}`);
@@ -48,11 +50,11 @@ function App() {
     setStatus('discovering');
     setMessage('正在发现页面结构...');
     try {
-      const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+      const tabs = await api.tabs.query({ active: true, currentWindow: true });
       const tab = tabs[0];
       if (!tab?.id) throw new Error('No active tab');
 
-      const response = await browser.tabs.sendMessage(tab.id, {
+      const response = await api.tabs.sendMessage(tab.id, {
         type: 'content.discoverNav',
       });
 
@@ -86,7 +88,7 @@ function App() {
     setStatus('crawling');
     setMessage(`正在保存 ${selected.length} 个页面...`);
     try {
-      await browser.runtime.sendMessage({
+      await api.runtime.sendMessage({
         type: 'popup.startCrawl',
         selectedUrls: selected,
       });

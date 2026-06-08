@@ -1,5 +1,6 @@
 node_modules/
 dist/
+dist-chrome/
 *.tgz
 .DS_Store
 *.log

@@ -1,5 +1,7 @@
 import type { CrawlTask, CrawlStatus, CapturedPage } from '@/shared/types';
 
+const api = (typeof browser !== 'undefined' ? browser : chrome) as typeof browser;
+
 let currentTask: CrawlTask | null = null;
 
 export function getCurrentTask(): CrawlTask | null {
@@ -108,12 +110,12 @@ export function resumeTask() {
 
 export function clearTask() {
   currentTask = null;
-  browser.storage.local.remove('saveit_task');
+  api.storage.local.remove('saveit_task');
 }
 
 export async function loadPersistedTask(): Promise<CrawlTask | null> {
   try {
-    const result = await browser.storage.local.get('saveit_task');
+    const result = await api.storage.local.get('saveit_task');
     if (result.saveit_task) {
       currentTask = result.saveit_task;
       return currentTask;
@@ -125,7 +127,7 @@ export async function loadPersistedTask(): Promise<CrawlTask | null> {
 }
 
 function persistTask(task: CrawlTask) {
-  browser.storage.local.set({ saveit_task: task }).catch(() => {
+  api.storage.local.set({ saveit_task: task }).catch(() => {
     // ignore persistence errors
   });
 }
