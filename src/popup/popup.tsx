@@ -14,6 +14,14 @@ function App() {
   const [message, setMessage] = createSignal('');
   const [navTree, setNavTree] = createSignal<NavNode[]>([]);
   const [progress, setProgress] = createSignal({ completed: 0, total: 0, currentUrl: '' });
+  const [targetTabTitle, setTargetTabTitle] = createSignal('');
+
+  // Load pinned tab title for detached window
+  if (isInPopupWindow() && pinnedTabId()) {
+    api.tabs.get(pinnedTabId()!).then(tab => {
+      if (tab?.title) setTargetTabTitle(tab.title);
+    });
+  }
 
   api.runtime.onMessage.addListener((msg: SaveItMessage) => {
     switch (msg.type) {
@@ -159,6 +167,12 @@ function App() {
           >⧉</button>
         </Show>
       </header>
+
+      <Show when={isInPopupWindow() && targetTabTitle()}>
+        <div style={{ "margin-bottom": "10px", padding: "6px 10px", background: "#f0f9ff", "border-radius": "4px", "font-size": "12px", color: "#475569", overflow: "hidden", "text-overflow": "ellipsis", "white-space": "nowrap" }}>
+          目标：{targetTabTitle()}
+        </div>
+      </Show>
 
       {/* Mode tabs */}
       <div style={{ display: "flex", gap: "4px", "margin-bottom": "12px" }}>
