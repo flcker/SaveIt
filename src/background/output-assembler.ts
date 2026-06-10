@@ -237,10 +237,8 @@ function escapeHtml(text: string): string {
 }
 
 const SAVEIT_UI_CSS = `
-    * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       display: flex;
       min-height: 100vh;
     }
@@ -255,6 +253,8 @@ const SAVEIT_UI_CSS = `
       border-right: 1px solid #e2e8f0;
       padding: 16px;
       font-size: 13px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      box-sizing: border-box;
     }
     .saveit-toc-header {
       display: flex;
@@ -300,22 +300,7 @@ const SAVEIT_UI_CSS = `
     }
     #saveit-content {
       flex: 1;
-      padding: 24px 32px;
-      max-width: 900px;
       overflow-x: hidden;
-    }
-    .saveit-page {
-      line-height: 1.6;
-    }
-    .saveit-page img {
-      max-width: 100%;
-      height: auto;
-    }
-    .saveit-page pre {
-      overflow-x: auto;
-      background: #f1f5f9;
-      padding: 12px;
-      border-radius: 4px;
     }
     @media (max-width: 768px) {
       #saveit-toc {
@@ -338,18 +323,13 @@ const SAVEIT_UI_CSS = `
         border-radius: 4px;
         padding: 4px 8px;
       }
-      #saveit-content {
-        padding: 16px;
-      }
     }
     @media (prefers-color-scheme: dark) {
-      body { background: #0f172a; color: #e2e8f0; }
       #saveit-toc { background: #1e293b; border-color: #334155; }
       .saveit-toc-header h2 { color: #f1f5f9; }
       #saveit-toc a { color: #94a3b8; }
       #saveit-toc a:hover { background: #334155; }
       #saveit-toc a.active { background: #1e3a5f; color: #93c5fd; }
-      .saveit-page pre { background: #1e293b; }
     }
 `;
 
