@@ -16,9 +16,17 @@ const NAV_SELECTORS = [
   '.navigation',
   '.toc',
   '.table-of-contents',
+  '[class*="sidebar"]',
+  '[class*="side-nav"]',
+  '[class*="menu-tree"]',
+  '[class*="doc-nav"]',
+  '[class*="tree-view"]',
+  '[class*="catalog"]',
   '[aria-label*="navigation" i]',
   '[aria-label*="sidebar" i]',
   '[aria-label*="menu" i]',
+  '[aria-label*="目录" i]',
+  '[aria-label*="导航" i]',
 ];
 
 export function discoverFromDom(): DiscoveryResult {
@@ -110,9 +118,29 @@ export function getNavRoot(): Element | null {
   for (const selector of NAV_SELECTORS) {
     const elements = document.querySelectorAll(selector);
     for (const el of elements) {
+      // Count links OR expandable items (collapsed tree may have few visible <a>)
       const linkCount = el.querySelectorAll('a[href]').length;
       if (linkCount >= 3) return el;
+
+      const expandableCount = el.querySelectorAll(
+        '[aria-expanded], details, [class*="expand"], [class*="collapse"], ' +
+        '[class*="toggle"], [class*="arrow"], [class*="tree-node"], [class*="menu-item"]'
+      ).length;
+      if (expandableCount >= 2) return el;
     }
   }
+
+  // Last resort: find the narrower left-side container with multiple text items
+  const candidates = document.querySelectorAll(
+    '[class*="aside"], [class*="sidebar"], [class*="left"], [class*="catalog"], [class*="directory"]'
+  );
+  for (const el of candidates) {
+    const rect = el.getBoundingClientRect();
+    if (rect.width > 0 && rect.width < window.innerWidth * 0.4) {
+      const items = el.querySelectorAll('a[href], [class*="item"], [class*="link"], [role="treeitem"]');
+      if (items.length >= 2) return el;
+    }
+  }
+
   return null;
 }

@@ -12,21 +12,19 @@ export const genericAdapter: SiteAdapter = {
   },
 
   async getNavTree(): Promise<NavNode[]> {
-    // First try DOM discovery
-    const domResult = discoverFromDom();
-    if (domResult.nodes.length === 0) return [];
-
-    // Try to expand collapsed items
+    // Try to find nav root and expand collapsed items first
     const navRoot = getNavRoot();
     if (navRoot) {
       try {
         const expanded = await expandNavTree(navRoot);
         if (expanded.length > 0) return expanded;
       } catch {
-        // fallback to DOM result
+        // expansion failed
       }
     }
 
+    // Fallback to simple DOM discovery (no expansion)
+    const domResult = discoverFromDom();
     return domResult.nodes;
   },
 

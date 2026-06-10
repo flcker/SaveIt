@@ -24,7 +24,13 @@ const TOGGLE_SELECTORS = [
   '[class*="chevron"]',
   '[class*="arrow"]',
   '[class*="caret"]',
+  '[class*="tree-switcher"]',
+  '[class*="folder"]',
+  '[class*="submenu-title"]',
+  '[class*="menu-title"]',
   '[data-state="closed"]',
+  '.ant-tree-switcher_close',
+  '.el-tree-node__expand-icon',
 ];
 
 export async function expandNavTree(
