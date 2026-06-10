@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.1.1] - 2026-06-10
+
+### Fixed
+
+- **弹窗失焦消失**：标题栏添加 ⧉ 按钮可弹出独立窗口，URL 参数绑定目标 tab
+- **独立窗口无法发现站点**：改为 `windows.getAll({ windowTypes: ['normal'] })` 查找目标 tab
+- **独立窗口显示目标 tab 名称**：标题栏下方显示 `目标：{页面标题}`
+- **侧栏面板替代弹窗**：Firefox `sidebar_action` + Chrome `side_panel`，与 tab 天然关联不丢焦
+- **工具栏图标打开侧栏**：移除 blank popup，点击直接 `sidebarAction.toggle()`
+- **合并输出背景色不一致**：SaveIt UI CSS 不再覆盖 body 的 background/font-family，页面样式由 @scope 控制
+- **合并输出内部链接不可点击**：已捕获页面之间的链接自动改写为 `#page-{slug}`，content 内链接也可导航
+- **CSP 拦截 MAIN world 脚本**：外部脚本加载失败时回退到 inline 注入
+- **Generic 适配器发现少**：TreeExpander 优先展开再收集；新增 Ant Design / Element UI toggle 选择器
+- **未来云 SPA 内容为空**：`waitForReady` 检测 loading mask 消失 + body 内容 >50 字符才视为就绪
+
+### Added
+
+- **TAL Cloud 适配器**：识别 Semi Design 文档平台（`aside.semi-layout-sider` + `[class*="tocs_wrap"]`）
+- **页面结构探测脚本**：When all adapters fail, inject JS into page for heuristic nav analysis
+- **robots.txt 解析**：自动遵守 Crawl-delay 和 Disallow 规则
+- **HTTP 429 指数退避**：最大 30s
+- **Options 选项页面**：捕获设置、爬取参数、输出格式
+- **Chromium MV3 双目标构建**：`npm run build:chrome` → `dist-chrome/`
+- **调试信息面板**：popup 底部显示每个适配器的检测结果
+
+### Changed
+
+- **README 精简**，构建指南独立到 `docs/build.md`
+- **npm scripts 增加** `build:chrome`、`build:all`、`dev`、`lint`、`icons`
+- **sidebar 替代 popup 作为主要交互方式**
+
+---
+
 ## [0.1.0] - 2026-06-08
 
 ### Added
