@@ -49,19 +49,13 @@ function App() {
   const [debugLogs, setDebugLogs] = createSignal<Array<{adapter: string; detected: boolean; nodeCount: number; error?: string}>>([]);
 
   async function getTargetTab(): Promise<browser.tabs.Tab> {
-    if (isInPopupWindow()) {
-      // Find the active tab in the most recently focused normal browser window
-      const windows = await api.windows.getAll({ windowTypes: ['normal'] });
-      // Sort by focused state — the current popup window is type 'popup', not 'normal'
-      for (const win of windows) {
-        if (!win.id) continue;
-        const tabs = await api.tabs.query({ active: true, windowId: win.id });
-        const tab = tabs[0];
-        if (tab?.url && !tab.url.startsWith(api.runtime.getURL(''))) {
-          return tab;
-        }
-      }
+    const tabId = pinnedTabId();
+    if (tabId) {
+      // Detached window: always communicate with the pinned tab
+      const tab = await api.tabs.get(tabId);
+      if (tab) return tab;
     }
+    // Normal popup: use the active tab in the current window
     const tabs = await api.tabs.query({ active: true, currentWindow: true });
     if (tabs[0]) return tabs[0];
     throw new Error('No active tab');
@@ -133,14 +127,17 @@ function App() {
     setNavTree([...navTree()]);
   }
 
-  const isDetached = () => window.location.protocol === 'moz-extension:' || window.location.protocol === 'chrome-extension:';
-  const isInPopupWindow = () => {
-    // If opened as a standalone window (not the default popup dropdown)
-    return window.opener === null && window.location.search.includes('detached=1');
-  };
+  const params = new URLSearchParams(window.location.search);
+  const isInPopupWindow = () => params.has('tabId');
+  const pinnedTabId = () => Number(params.get('tabId')) || null;
 
   async function handleDetach() {
-    const url = api.runtime.getURL('popup/popup.html?detached=1');
+    // Remember which tab we're targeting
+    const tabs = await api.tabs.query({ active: true, currentWindow: true });
+    const targetTabId = tabs[0]?.id;
+    if (!targetTabId) return;
+
+    const url = api.runtime.getURL(`popup/popup.html?tabId=${targetTabId}`);
     await api.windows.create({
       url,
       type: 'popup',
