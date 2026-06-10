@@ -49,13 +49,18 @@ function App() {
   const [debugLogs, setDebugLogs] = createSignal<Array<{adapter: string; detected: boolean; nodeCount: number; error?: string}>>([]);
 
   async function getTargetTab(): Promise<browser.tabs.Tab> {
-    // If in detached window, query the last focused normal browser window
     if (isInPopupWindow()) {
-      const tabs = await api.tabs.query({ active: true, lastFocusedWindow: true });
-      // Filter out extension pages
-      const extUrl = api.runtime.getURL('');
-      const target = tabs.find(t => t.url && !t.url.startsWith(extUrl));
-      if (target) return target;
+      // Find the active tab in the most recently focused normal browser window
+      const windows = await api.windows.getAll({ windowTypes: ['normal'] });
+      // Sort by focused state — the current popup window is type 'popup', not 'normal'
+      for (const win of windows) {
+        if (!win.id) continue;
+        const tabs = await api.tabs.query({ active: true, windowId: win.id });
+        const tab = tabs[0];
+        if (tab?.url && !tab.url.startsWith(api.runtime.getURL(''))) {
+          return tab;
+        }
+      }
     }
     const tabs = await api.tabs.query({ active: true, currentWindow: true });
     if (tabs[0]) return tabs[0];
