@@ -12,7 +12,8 @@
     "tabs",
     "scripting",
     "offscreen",
-    "alarms"
+    "alarms",
+    "sidePanel"
   ],
 
   "host_permissions": ["<all_urls>"],
@@ -39,6 +40,10 @@
       "48": "icons/icon-48.png"
     },
     "default_title": "SaveIt"
+  },
+
+  "side_panel": {
+    "default_path": "sidebar/sidebar.html"
   },
 
   "options_ui": {

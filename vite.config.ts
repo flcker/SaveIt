@@ -59,6 +59,7 @@ function extensionPlugin() {
       const htmlEntries = [
         { srcDir: 'popup', name: 'popup' },
         { srcDir: 'options', name: 'options' },
+        { srcDir: 'sidebar', name: 'sidebar' },
       ];
       for (const entry of htmlEntries) {
         const htmlSrc = resolve(dist, 'src', entry.srcDir, `${entry.name}.html`);
@@ -87,6 +88,7 @@ const baseInput: Record<string, string> = {
   injected: resolve(__dirname, 'src/injected/spa-hooks.ts'),
   'options/options': resolve(__dirname, 'src/options/options.html'),
   'popup/popup': resolve(__dirname, 'src/popup/popup.html'),
+  'sidebar/sidebar': resolve(__dirname, 'src/sidebar/sidebar.html'),
 };
 
 if (isChrome) {
