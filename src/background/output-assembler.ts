@@ -128,6 +128,12 @@ function extractAndScopeStyles(doc: Document, slug: string): string {
 function extractBodyContent(doc: Document): string {
   // Try content selectors in priority order
   const CONTENT_SELECTORS = [
+    // TAL Cloud / Semi Design docs
+    '[class*="docContent"]',
+    '[class*="markdownContent"]',
+    '[class*="doc-content"]',
+    '[class*="page-content"]',
+    '.semi-layout-content [class*="content"]',
     // GitBook (old)
     '.book-body section.normal',
     '.book-body .page-inner section',
@@ -147,17 +153,22 @@ function extractBodyContent(doc: Document): string {
     '#main-content',
     '.wiki-content',
     // Generic
-    'main',
     'article',
     '[role="main"]',
     '.content',
     '#content',
+    'main',
   ];
 
   for (const selector of CONTENT_SELECTORS) {
     const el = doc.querySelector(selector);
     if (el && el.textContent && el.textContent.trim().length > 50) {
-      return el.innerHTML;
+      const clone = el.cloneNode(true) as Element;
+      // Remove nav/sidebar elements that might be inside the content container
+      clone.querySelectorAll(
+        'nav, aside, [class*="sidebar"], [class*="toc_wrap"], [class*="sider"], [role="navigation"]'
+      ).forEach((n) => n.remove());
+      return clone.innerHTML;
     }
   }
 
