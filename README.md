@@ -10,89 +10,37 @@
 - **CSS 隔离**：合并输出使用 `@scope` 防止页面间样式污染
 - **内置导航**：合并文件包含侧边栏目录，支持深色/浅色模式
 
-## 环境要求
-
-- Node.js >= 18
-- npm >= 9
-- Firefox >= 115 或 Chrome >= 118
-
-## 安装依赖
+## 快速开始
 
 ```bash
 npm install
-```
-
-## 构建
-
-```bash
-# Firefox 版本（输出到 dist/）
 npm run build
-
-# Chrome/Edge 版本（输出到 dist-chrome/）
-npm run build:chrome
-
-# 同时构建两个版本
-npm run build:all
 ```
 
-## 开发模式
-
-```bash
-# 监听文件变化自动重新构建（Firefox）
-npm run dev
-```
-
-## 生成图标
-
-```bash
-npm run icons
-```
-
-## 在浏览器中加载
-
-### Firefox
-
-1. 地址栏输入 `about:debugging#/runtime/this-firefox`
-2. 点击 **"临时载入附加组件..."**
-3. 选择 `dist/manifest.json`
-
-### Chrome / Edge
-
-1. 地址栏输入 `chrome://extensions`
-2. 开启右上角 **"开发者模式"**
-3. 点击 **"加载已解压的扩展程序"**
-4. 选择 `dist-chrome/` 文件夹
+然后在 Firefox 中加载 `dist/manifest.json`，详见 [构建指南](docs/build.md)。
 
 ## 使用方式
 
 1. 点击工具栏 SaveIt 图标
-2. **保存页面**：点击"保存当前页面"按钮，下载单页 HTML
-3. **保存站点**：
-   - 切换到"保存站点"标签
-   - 点击"发现页面结构"
-   - 在树形列表中勾选/取消需要的页面
-   - 点击"保存选中页面"
+2. **保存页面**：点击"保存当前页面"，下载单页 HTML
+3. **保存站点**：切换到"保存站点" → "发现页面结构" → 勾选页面 → "保存选中页面"
 4. 点击标题栏 ⧉ 按钮可将弹窗转为独立窗口（防止失焦关闭）
+
+## 文档
+
+- [构建指南](docs/build.md) — 环境配置、构建命令、浏览器加载、开发流程、故障排除
+- [技术设计](docs/saveit-technical-design.md) — 架构设计、模块职责、核心算法
+- [SingleFile 分析](docs/singlefile-analysis.md) — 参考项目的技术分析
+- [路线图](ROADMAP.md) — 开发阶段与完成进度
+- [更新日志](CHANGELOG.md)
 
 ## 项目结构
 
 ```
 src/
-├── background/          # 后台页面（Firefox）/ Service Worker（Chrome）
-│   ├── index.ts         # 消息路由、爬取循环
-│   ├── page-capture.ts  # 资源内联引擎
-│   ├── output-assembler.ts  # 多页合并 + CSS 隔离
-│   ├── task-scheduler.ts    # 爬取状态机
-│   ├── tab-manager.ts       # 后台标签页管理
-│   └── robots-txt.ts        # robots.txt 解析
-├── content/             # Content Script
-│   ├── index.ts         # DOM 快照 + 消息处理
-│   ├── nav-discovery.ts # 导航发现策略链
-│   ├── tree-expander.ts # BFS 侧边栏展开
-│   ├── strategies/      # 发现策略（sitemap/config/dom）
-│   └── adapters/        # 站点适配器
+├── background/          # 后台页面 / Service Worker
+├── content/             # Content Script + 适配器 + 策略
 ├── injected/            # MAIN world 注入脚本
-│   └── spa-hooks.ts     # pushState/fetch 拦截
 ├── offscreen/           # Chrome Offscreen Document
 ├── options/             # 选项页面
 ├── popup/               # 弹窗 UI（Solid.js）
@@ -101,45 +49,7 @@ src/
 
 ## 调试
 
-发现导航失败时，展开 popup 底部的"调试信息"面板查看每个适配器的检测结果。
-
-在浏览器控制台手动检查导航结构：
-
-```js
-// 检查页面有哪些导航元素
-document.querySelectorAll('nav, aside, [role="navigation"], .book-summary')
-
-// 检查侧边栏中的链接
-document.querySelectorAll('nav a[href], aside a[href], .book-summary a[href]')
-
-// 检查框架特有全局变量
-window.__VP_SITE_DATA__   // VitePress
-window.__NEXT_DATA__      // GitBook (new) / Next.js
-window.__docusaurus       // Docusaurus
-```
-
-## 所有命令
-
-| 命令 | 说明 |
-|------|------|
-| `npm run build` | 构建 Firefox 版本 → `dist/` |
-| `npm run build:chrome` | 构建 Chrome/Edge 版本 → `dist-chrome/` |
-| `npm run build:all` | 同时构建两个版本 |
-| `npm run dev` | 监听模式构建（Firefox） |
-| `npm run start:firefox` | 启动 web-ext 临时加载（需本地 Firefox） |
-| `npm run icons` | 生成占位图标 |
-| `npm run test` | 运行测试 |
-| `npm run lint` | TypeScript 类型检查 |
-
-## 技术栈
-
-| 组件 | 选择 |
-|------|------|
-| 语言 | TypeScript 5 |
-| 构建 | Vite 6 + cross-env |
-| UI | Solid.js |
-| Firefox | MV2, 持久后台页面 |
-| Chrome | MV3, Service Worker + Offscreen Document |
+发现导航失败时，展开 popup 底部的"调试信息"面板查看适配器检测结果。
 
 ## 协议
 
