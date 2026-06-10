@@ -25,7 +25,7 @@ export const talcloudAdapter: SiteAdapter = {
   },
 
   getContentSelector(): string {
-    return '[class*="docContent"], [class*="markdownContent"], [class*="page-content"], main, article';
+    return '[class*="rightWrap"], [class*="rightContent"], [class*="docContent"], [class*="markdownContent"], aside + div, aside ~ div:not([class*="toc"])';
   },
 
   getExpandStrategy(): 'click-toggle' | 'spa-route' | 'none' {
