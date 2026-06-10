@@ -2,8 +2,8 @@ import type { SiteAdapter } from './interface';
 import type { NavNode } from '@/shared/types';
 import { createNavNode, normalizeUrl, isSameOrigin } from './interface';
 
-export const talcloudAdapter: SiteAdapter = {
-  name: 'talcloud',
+export const semiDesignAdapter: SiteAdapter = {
+  name: 'semi-design',
 
   detect(): boolean {
     return !!(

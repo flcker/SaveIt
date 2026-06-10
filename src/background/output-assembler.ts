@@ -128,7 +128,7 @@ function extractAndScopeStyles(doc: Document, slug: string): string {
 function extractBodyContent(doc: Document): string {
   // Try content selectors in priority order
   const CONTENT_SELECTORS = [
-    // TAL Cloud / Semi Design docs
+    // Semi Design documentation
     '.semi-layout-content',
     '[class*="layout-content"]',
     '[class*="rightWrap"]',

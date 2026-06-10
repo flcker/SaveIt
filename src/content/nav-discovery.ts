@@ -5,7 +5,7 @@ import { docusaurusAdapter } from './adapters/docusaurus';
 import { gitbookAdapter } from './adapters/gitbook';
 import { mkdocsAdapter } from './adapters/mkdocs';
 import { confluenceAdapter } from './adapters/confluence';
-import { talcloudAdapter } from './adapters/talcloud';
+import { semiDesignAdapter } from './adapters/talcloud';
 import { genericAdapter } from './adapters/generic';
 import { discoverFromSitemap } from './strategies/sitemap';
 import { getProbeScript, type ProbeResult } from './probe';
@@ -17,7 +17,7 @@ const ADAPTERS: SiteAdapter[] = [
   gitbookAdapter,
   mkdocsAdapter,
   confluenceAdapter,
-  talcloudAdapter,
+  semiDesignAdapter,
   genericAdapter,
 ];
 
