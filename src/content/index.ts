@@ -7,11 +7,34 @@ const api = (typeof browser !== 'undefined' ? browser : chrome) as typeof browse
 injectMainWorldScript();
 
 function injectMainWorldScript() {
-  const script = document.createElement('script');
-  script.src = api.runtime.getURL('injected.js');
-  script.onload = () => script.remove();
-  (document.head || document.documentElement).appendChild(script);
+  try {
+    // Try external script first (cleaner, but may be blocked by CSP)
+    const script = document.createElement('script');
+    script.src = api.runtime.getURL('injected.js');
+    script.onload = () => script.remove();
+    script.onerror = () => {
+      // CSP blocked external script — fall back to inline injection
+      script.remove();
+      injectInline();
+    };
+    (document.head || document.documentElement).appendChild(script);
+  } catch {
+    injectInline();
+  }
 }
+
+function injectInline() {
+  try {
+    const script = document.createElement('script');
+    script.textContent = INLINE_MAIN_WORLD_CODE;
+    (document.head || document.documentElement).appendChild(script);
+    script.remove();
+  } catch {
+    // Both methods blocked — MAIN world hooks unavailable (non-critical)
+  }
+}
+
+const INLINE_MAIN_WORLD_CODE = `(function(){var P='__saveit_';var oP=history.pushState.bind(history),oR=history.replaceState.bind(history);history.pushState=function(s,t,u){oP(s,t,u);f('pushState')};history.replaceState=function(s,t,u){oR(s,t,u);f('replaceState')};window.addEventListener('popstate',function(){f('popstate')});window.addEventListener('hashchange',function(){f('hashchange')});function f(t){window.dispatchEvent(new CustomEvent(P+'navigate',{detail:{navType:t,url:location.href}}))}var n=0,it=null;function oS(){n++;if(it){clearTimeout(it);it=null}}function oE(){n=Math.max(0,n-1);if(n===0){it=setTimeout(function(){window.dispatchEvent(new CustomEvent(P+'network_idle'))},500)}}var oF=window.fetch.bind(window);window.fetch=function(){oS();return oF.apply(this,arguments).finally(oE)};var xO=XMLHttpRequest.prototype.open,xS=XMLHttpRequest.prototype.send;XMLHttpRequest.prototype.open=function(){this.__st=true;return xO.apply(this,arguments)};XMLHttpRequest.prototype.send=function(){if(this.__st){oS();this.addEventListener('loadend',oE,{once:true})}return xS.apply(this,arguments)};function eG(){var g={};if(window.__VP_SITE_DATA__)g.__VP_SITE_DATA__=window.__VP_SITE_DATA__;if(window.__docusaurus)g.__docusaurus=window.__docusaurus;if(window.__NEXT_DATA__)g.__NEXT_DATA__=window.__NEXT_DATA__;if(window.gitbook)g.gitbook=window.gitbook;return g}window.addEventListener(P+'request_globals',function(){window.dispatchEvent(new CustomEvent(P+'globals',{detail:eG()}))});function post(){var g=eG();if(Object.keys(g).length)window.dispatchEvent(new CustomEvent(P+'globals',{detail:g}))}if(document.readyState==='complete')setTimeout(post,100);else window.addEventListener('load',function(){setTimeout(post,100)})})();`;
 
 api.runtime.onMessage.addListener(
   (message: SaveItMessage, _sender, sendResponse) => {
