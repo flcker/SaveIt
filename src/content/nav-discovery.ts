@@ -17,33 +17,50 @@ const ADAPTERS: SiteAdapter[] = [
   genericAdapter,
 ];
 
+export interface DiscoveryLog {
+  adapter: string;
+  detected: boolean;
+  nodeCount: number;
+  error?: string;
+}
+
 export async function discoverNavigation(): Promise<{
   nodes: NavNode[];
   source: string;
+  logs: DiscoveryLog[];
 }> {
-  // Detect which adapter applies
+  const logs: DiscoveryLog[] = [];
+
+  // Try each adapter in order
   for (const adapter of ADAPTERS) {
-    if (!adapter.detect()) continue;
+    const detected = adapter.detect();
+    if (!detected) {
+      logs.push({ adapter: adapter.name, detected: false, nodeCount: 0 });
+      continue;
+    }
 
     try {
       const nodes = await adapter.getNavTree();
+      logs.push({ adapter: adapter.name, detected: true, nodeCount: nodes.length });
       if (nodes.length > 0) {
-        return { nodes, source: adapter.name };
+        return { nodes, source: adapter.name, logs };
       }
-    } catch {
+    } catch (err) {
+      logs.push({ adapter: adapter.name, detected: true, nodeCount: 0, error: String(err) });
       continue;
     }
   }
 
-  // Fallback: try sitemap
+  // Fallback: sitemap
   try {
     const result = await discoverFromSitemap();
+    logs.push({ adapter: 'sitemap', detected: true, nodeCount: result.nodes.length });
     if (result.nodes.length >= 3) {
-      return { nodes: result.nodes, source: 'sitemap' };
+      return { nodes: result.nodes, source: 'sitemap', logs };
     }
-  } catch {
-    // no sitemap
+  } catch (err) {
+    logs.push({ adapter: 'sitemap', detected: false, nodeCount: 0, error: String(err) });
   }
 
-  return { nodes: [], source: 'none' };
+  return { nodes: [], source: 'none', logs };
 }

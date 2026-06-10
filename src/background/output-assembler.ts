@@ -70,15 +70,47 @@ function extractAndScopeStyles(doc: Document, slug: string): string {
 }
 
 function extractBodyContent(doc: Document): string {
-  // Try to find main content area
-  const main = doc.querySelector('main') || doc.querySelector('article') || doc.body;
-  if (!main) return doc.body?.innerHTML || '';
+  // Try content selectors in priority order
+  const CONTENT_SELECTORS = [
+    // GitBook (old)
+    '.book-body section.normal',
+    '.book-body .page-inner section',
+    '.book-body .page-wrapper .page-inner',
+    // GitBook (new)
+    'main[class*="page"]',
+    // VitePress
+    '.vp-doc',
+    '.VPDoc .content',
+    // Docusaurus
+    '.theme-doc-markdown',
+    'article[class*="docMainContainer"]',
+    // MkDocs
+    '.md-content__inner',
+    '.document [role="main"]',
+    // Confluence
+    '#main-content',
+    '.wiki-content',
+    // Generic
+    'main',
+    'article',
+    '[role="main"]',
+    '.content',
+    '#content',
+  ];
 
-  // Remove navigation elements from body content
-  const clone = main.cloneNode(true) as Element;
-  clone.querySelectorAll('nav, header, footer, .sidebar, .navigation').forEach(
-    (el) => el.remove()
-  );
+  for (const selector of CONTENT_SELECTORS) {
+    const el = doc.querySelector(selector);
+    if (el && el.textContent && el.textContent.trim().length > 50) {
+      return el.innerHTML;
+    }
+  }
+
+  // Fallback: use body but remove known non-content elements
+  const clone = doc.body.cloneNode(true) as Element;
+  clone.querySelectorAll(
+    'nav, header, footer, .sidebar, .navigation, .book-summary, .book-header, ' +
+    '[role="navigation"], .toc, .table-of-contents, script, style'
+  ).forEach((el) => el.remove());
 
   return clone.innerHTML;
 }

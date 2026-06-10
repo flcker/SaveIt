@@ -46,9 +46,12 @@ function App() {
     }
   }
 
+  const [debugLogs, setDebugLogs] = createSignal<Array<{adapter: string; detected: boolean; nodeCount: number; error?: string}>>([]);
+
   async function handleDiscover() {
     setStatus('discovering');
     setMessage('正在发现页面结构...');
+    setDebugLogs([]);
     try {
       const tabs = await api.tabs.query({ active: true, currentWindow: true });
       const tab = tabs[0];
@@ -62,10 +65,12 @@ function App() {
         throw new Error(response?.error || '发现失败');
       }
 
-      const { nodes } = response.data as { nodes: NavNode[]; source: string };
+      const { nodes, logs } = response.data as { nodes: NavNode[]; source: string; logs: any[] };
+      if (logs) setDebugLogs(logs);
+
       if (nodes.length === 0) {
         setStatus('error');
-        setMessage('未找到导航结构');
+        setMessage('未找到导航结构（查看下方调试信息）');
         return;
       }
 
@@ -105,10 +110,26 @@ function App() {
     setNavTree([...navTree()]);
   }
 
+  async function handleDetach() {
+    const url = api.runtime.getURL('popup/popup.html');
+    await api.windows.create({
+      url,
+      type: 'popup',
+      width: 380,
+      height: 520,
+    });
+    window.close();
+  }
+
   return (
     <div>
-      <header style={{ "margin-bottom": "12px" }}>
+      <header style={{ "margin-bottom": "12px", display: "flex", "align-items": "center", "justify-content": "space-between" }}>
         <h1 style={{ "font-size": "18px", "font-weight": "600" }}>SaveIt</h1>
+        <button
+          onClick={handleDetach}
+          title="弹出为独立窗口"
+          style={{ background: "none", border: "none", cursor: "pointer", "font-size": "16px", color: "#64748b" }}
+        >⧉</button>
       </header>
 
       {/* Mode tabs */}
@@ -182,6 +203,26 @@ function App() {
         >
           {message()}
         </div>
+      </Show>
+
+      {/* Debug logs */}
+      <Show when={debugLogs().length > 0}>
+        <details style={{ "margin-top": "8px", "font-size": "11px" }}>
+          <summary style={{ cursor: "pointer", color: "#64748b" }}>调试信息（适配器检测结果）</summary>
+          <div style={{ "margin-top": "4px", background: "#f1f5f9", "border-radius": "4px", padding: "8px", "max-height": "150px", overflow: "auto" }}>
+            <For each={debugLogs()}>
+              {(log) => (
+                <div style={{ "margin-bottom": "4px", "font-family": "monospace" }}>
+                  <span style={{ color: log.detected ? '#16a34a' : '#94a3b8' }}>
+                    {log.detected ? '✓' : '✗'}
+                  </span>
+                  {' '}{log.adapter}: {log.nodeCount} nodes
+                  {log.error && <span style={{ color: '#dc2626' }}> ({log.error})</span>}
+                </div>
+              )}
+            </For>
+          </div>
+        </details>
       </Show>
     </div>
   );

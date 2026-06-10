@@ -32,7 +32,7 @@ export const gitbookAdapter: SiteAdapter = {
   },
 
   getContentSelector(): string {
-    return '.book-body .page-wrapper, main[class*="page"], .markdown-section';
+    return '.book-body section.normal, .book-body .page-wrapper, main[class*="page"], .markdown-section';
   },
 
   getExpandStrategy(): 'click-toggle' | 'spa-route' | 'none' {
@@ -77,18 +77,26 @@ function parsePages(pages: any[], baseUrl: string, depth: number): NavNode[] {
 
 function parseSidebarDom(sidebar: Element): NavNode[] {
   const baseUrl = location.href;
-  const items = sidebar.querySelectorAll('li a[href]');
+  const origin = new URL(baseUrl).origin;
+  const chapters = sidebar.querySelectorAll('li.chapter a[href]');
   const nodes: NavNode[] = [];
 
-  for (const anchor of items) {
+  for (const anchor of chapters) {
     const href = anchor.getAttribute('href');
-    if (!href) continue;
+    if (!href || href.startsWith('http') && !href.startsWith(origin)) continue;
+    if (anchor.getAttribute('target') === 'blank') continue;
+
     const url = normalizeUrl(href, baseUrl);
     if (!url) continue;
-    const title = anchor.textContent?.trim() || '';
-    if (title) {
-      nodes.push(createNavNode(url, title, 0));
-    }
+
+    const title = anchor.textContent?.trim().replace(/^\d+\.\s*/, '') || '';
+    if (!title) continue;
+
+    const li = anchor.closest('li.chapter');
+    const level = li?.getAttribute('data-level') || '0';
+    const depth = level.split('.').length - 1;
+
+    nodes.push(createNavNode(url, title, depth));
   }
   return nodes;
 }
