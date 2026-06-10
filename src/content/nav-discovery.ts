@@ -8,6 +8,8 @@ import { confluenceAdapter } from './adapters/confluence';
 import { talcloudAdapter } from './adapters/talcloud';
 import { genericAdapter } from './adapters/generic';
 import { discoverFromSitemap } from './strategies/sitemap';
+import { getProbeScript, type ProbeResult } from './probe';
+import { createNavNode } from './adapters/interface';
 
 const ADAPTERS: SiteAdapter[] = [
   vitepressAdapter,
@@ -71,5 +73,56 @@ export async function discoverNavigation(): Promise<{
     logs.push({ adapter: 'sitemap', detected: false, nodeCount: 0, error: String(err) });
   }
 
+  // Last resort: inject probe script into page to analyze DOM structure
+  try {
+    const probeResult = await runProbe();
+    logs.push({ adapter: 'probe', detected: true, nodeCount: probeResult.links.length });
+    if (probeResult.links.length > 0) {
+      const nodes = probeResult.links.map((l) =>
+        createNavNode(l.url, l.title, l.depth)
+      );
+      return { nodes, source: `probe(${probeResult.strategy})`, logs };
+    }
+  } catch (err) {
+    logs.push({ adapter: 'probe', detected: false, nodeCount: 0, error: String(err) });
+  }
+
   return { nodes: [], source: 'none', logs };
+}
+
+async function runProbe(): Promise<ProbeResult> {
+  return new Promise((resolve, reject) => {
+    const id = '__saveit_probe_' + Date.now();
+
+    // Listen for probe result
+    const handler = (event: Event) => {
+      const ce = event as CustomEvent;
+      if (ce.detail?.id === id) {
+        window.removeEventListener('__saveit_probe_result', handler);
+        try {
+          resolve(JSON.parse(ce.detail.data));
+        } catch {
+          reject(new Error('probe parse error'));
+        }
+      }
+    };
+    window.addEventListener('__saveit_probe_result', handler);
+
+    // Inject probe script
+    const script = document.createElement('script');
+    script.textContent = `(function(){
+      var result = ${getProbeScript()}
+      window.dispatchEvent(new CustomEvent('__saveit_probe_result', {
+        detail: { id: '${id}', data: result }
+      }));
+    })();`;
+    (document.head || document.documentElement).appendChild(script);
+    script.remove();
+
+    // Timeout
+    setTimeout(() => {
+      window.removeEventListener('__saveit_probe_result', handler);
+      reject(new Error('probe timeout'));
+    }, 10000);
+  });
 }
