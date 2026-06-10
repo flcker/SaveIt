@@ -33,7 +33,14 @@ export async function discoverNavigation(): Promise<{
 
   // Try each adapter in order
   for (const adapter of ADAPTERS) {
-    const detected = adapter.detect();
+    let detected = false;
+    try {
+      detected = adapter.detect();
+    } catch {
+      logs.push({ adapter: adapter.name, detected: false, nodeCount: 0, error: 'detect() threw' });
+      continue;
+    }
+
     if (!detected) {
       logs.push({ adapter: adapter.name, detected: false, nodeCount: 0 });
       continue;

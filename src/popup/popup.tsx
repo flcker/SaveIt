@@ -48,13 +48,26 @@ function App() {
 
   const [debugLogs, setDebugLogs] = createSignal<Array<{adapter: string; detected: boolean; nodeCount: number; error?: string}>>([]);
 
+  async function getTargetTab(): Promise<browser.tabs.Tab> {
+    // If in detached window, query the last focused normal browser window
+    if (isInPopupWindow()) {
+      const tabs = await api.tabs.query({ active: true, lastFocusedWindow: true });
+      // Filter out extension pages
+      const extUrl = api.runtime.getURL('');
+      const target = tabs.find(t => t.url && !t.url.startsWith(extUrl));
+      if (target) return target;
+    }
+    const tabs = await api.tabs.query({ active: true, currentWindow: true });
+    if (tabs[0]) return tabs[0];
+    throw new Error('No active tab');
+  }
+
   async function handleDiscover() {
     setStatus('discovering');
     setMessage('正在发现页面结构...');
     setDebugLogs([]);
     try {
-      const tabs = await api.tabs.query({ active: true, currentWindow: true });
-      const tab = tabs[0];
+      const tab = await getTargetTab();
       if (!tab?.id) throw new Error('No active tab');
 
       const response = await api.tabs.sendMessage(tab.id, {
@@ -79,7 +92,12 @@ function App() {
       setMessage(`发现 ${countNodes(nodes)} 个页面`);
     } catch (err) {
       setStatus('error');
-      setMessage(`发现失败: ${err}`);
+      const errStr = String(err);
+      if (errStr.includes('connection') || errStr.includes('Receiving end does not exist')) {
+        setMessage('无法连接页面（请刷新目标页面后重试）');
+      } else {
+        setMessage(`发现失败: ${errStr.replace(/^Error:\s*/, '')}`);
+      }
     }
   }
 
@@ -110,8 +128,14 @@ function App() {
     setNavTree([...navTree()]);
   }
 
+  const isDetached = () => window.location.protocol === 'moz-extension:' || window.location.protocol === 'chrome-extension:';
+  const isInPopupWindow = () => {
+    // If opened as a standalone window (not the default popup dropdown)
+    return window.opener === null && window.location.search.includes('detached=1');
+  };
+
   async function handleDetach() {
-    const url = api.runtime.getURL('popup/popup.html');
+    const url = api.runtime.getURL('popup/popup.html?detached=1');
     await api.windows.create({
       url,
       type: 'popup',
@@ -125,11 +149,13 @@ function App() {
     <div>
       <header style={{ "margin-bottom": "12px", display: "flex", "align-items": "center", "justify-content": "space-between" }}>
         <h1 style={{ "font-size": "18px", "font-weight": "600" }}>SaveIt</h1>
-        <button
-          onClick={handleDetach}
-          title="弹出为独立窗口"
-          style={{ background: "none", border: "none", cursor: "pointer", "font-size": "16px", color: "#64748b" }}
-        >⧉</button>
+        <Show when={!isInPopupWindow()}>
+          <button
+            onClick={handleDetach}
+            title="弹出为独立窗口"
+            style={{ background: "none", border: "none", cursor: "pointer", "font-size": "16px", color: "#64748b" }}
+          >⧉</button>
+        </Show>
       </header>
 
       {/* Mode tabs */}

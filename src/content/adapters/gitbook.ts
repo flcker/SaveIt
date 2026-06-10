@@ -14,21 +14,33 @@ export const gitbookAdapter: SiteAdapter = {
   },
 
   async getNavTree(): Promise<NavNode[]> {
-    // Try __NEXT_DATA__ first (modern GitBook)
-    const globals = await getGlobals();
-    if (globals.__NEXT_DATA__) {
-      const nodes = parseNextDataNav(globals.__NEXT_DATA__);
+    // For old GitBook (v2.x), parse DOM directly — no JS globals needed
+    const sidebar = document.querySelector('.book-summary');
+    if (sidebar) {
+      const nodes = parseSidebarDom(sidebar);
       if (nodes.length > 0) return nodes;
     }
 
-    // Fallback: parse DOM sidebar
-    const sidebar =
-      document.querySelector('.book-summary') ||
+    // Try __NEXT_DATA__ for modern GitBook
+    try {
+      const globals = await getGlobals();
+      if (globals.__NEXT_DATA__) {
+        const nodes = parseNextDataNav(globals.__NEXT_DATA__);
+        if (nodes.length > 0) return nodes;
+      }
+    } catch {
+      // globals extraction failed, continue
+    }
+
+    // Fallback: any sidebar-like element
+    const fallbackSidebar =
       document.querySelector('[class*="sidebar"]') ||
       document.querySelector('nav');
-    if (!sidebar) return [];
+    if (fallbackSidebar) {
+      return parseSidebarDom(fallbackSidebar);
+    }
 
-    return parseSidebarDom(sidebar);
+    return [];
   },
 
   getContentSelector(): string {
