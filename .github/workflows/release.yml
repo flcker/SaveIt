@@ -18,7 +18,6 @@ jobs:
           cache: 'npm'
 
       - run: npm ci
-      - run: npm run icons
       - run: npm run build:all
 
       - name: Package Firefox
