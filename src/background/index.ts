@@ -24,6 +24,17 @@ import {
   captureTabContent,
 } from './tab-manager';
 
+// Toggle sidebar when toolbar icon is clicked
+if (api.browserAction) {
+  api.browserAction.onClicked.addListener(() => {
+    api.sidebarAction.toggle();
+  });
+} else if ((api as any).action) {
+  (api as any).action.onClicked.addListener(() => {
+    (api as any).sidePanel.open({ windowId: undefined });
+  });
+}
+
 api.runtime.onMessage.addListener(
   (message: SaveItMessage, _sender, sendResponse) => {
     switch (message.type) {
