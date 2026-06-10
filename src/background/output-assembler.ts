@@ -26,6 +26,11 @@ export function assembleMergedHtml(pages: CapturedPage[]): string {
     processedPages.push({ slug, title: page.title || page.navTitle, styles, body });
   }
 
+  // Rewrite internal links to #page-{slug} anchors
+  for (const page of processedPages) {
+    page.body = rewriteInternalLinks(page.body, slugs);
+  }
+
   // Deduplicate data: URIs across all styles
   const { sharedVars, processedStyles } = deduplicateDataUris(
     processedPages.map((p) => p.styles)
@@ -52,6 +57,57 @@ function urlToSlug(url: string, existing: Map<string, string>): string {
     return slug;
   } catch {
     return 'page-' + existing.size;
+  }
+}
+
+function rewriteInternalLinks(html: string, slugs: Map<string, string>): string {
+  // Build lookup: normalize URLs to match against captured pages
+  const urlToAnchor = new Map<string, string>();
+  for (const [url, slug] of slugs) {
+    urlToAnchor.set(url, `#page-${slug}`);
+    // Also add variants without trailing slash, with/without .html
+    const withoutSlash = url.replace(/\/$/, '');
+    const withoutHtml = url.replace(/\.html?$/, '');
+    urlToAnchor.set(withoutSlash, `#page-${slug}`);
+    urlToAnchor.set(withoutHtml, `#page-${slug}`);
+    if (!url.endsWith('/') && !url.match(/\.html?$/)) {
+      urlToAnchor.set(url + '/', `#page-${slug}`);
+    }
+  }
+
+  // Replace href="..." values that match captured page URLs
+  return html.replace(
+    /href="([^"#][^"]*)"/g,
+    (match, href: string) => {
+      // Try exact match first
+      if (urlToAnchor.has(href)) {
+        return `href="${urlToAnchor.get(href)}"`;
+      }
+      // Try resolving relative URLs against each captured page's origin
+      // Since we can't know the base here, try matching by pathname
+      const hrefPath = extractPathname(href);
+      if (hrefPath) {
+        for (const [url, anchor] of urlToAnchor) {
+          const urlPath = extractPathname(url);
+          if (urlPath && urlPath === hrefPath) {
+            return `href="${anchor}"`;
+          }
+        }
+      }
+      return match;
+    }
+  );
+}
+
+function extractPathname(url: string): string | null {
+  try {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return new URL(url).pathname.replace(/\/$/, '').replace(/\.html?$/, '');
+    }
+    // Relative path
+    return url.replace(/^\.\//, '/').replace(/\/$/, '').replace(/\.html?$/, '');
+  } catch {
+    return null;
   }
 }
 
@@ -359,6 +415,18 @@ const SAVEIT_NAV_JS = `
       showPage(slug);
       history.replaceState(null, '', '#page-' + slug);
     });
+  });
+
+  // Intercept all #page-* links inside content areas
+  document.addEventListener('click', function(e) {
+    var a = e.target.closest ? e.target.closest('a[href^="#page-"]') : null;
+    if (!a) return;
+    var slug = a.getAttribute('href').replace('#page-', '');
+    if (document.getElementById('page-' + slug)) {
+      e.preventDefault();
+      showPage(slug);
+      history.replaceState(null, '', '#page-' + slug);
+    }
   });
 
   if (toggle) {
