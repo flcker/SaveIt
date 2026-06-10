@@ -57,6 +57,13 @@ api.runtime.onMessage.addListener(
         );
         return true;
 
+      case 'content.getContentSelector':
+        sendResponse({
+          success: true,
+          data: findContentSelector(),
+        });
+        break;
+
       default:
         break;
     }
@@ -80,17 +87,86 @@ function captureSnapshot() {
   };
 }
 
+async function findContentSelector(): string {
+  const CONTENT_SELECTORS = [
+    '[class*="rightWrap"]', '[class*="rightContent"]',
+    '[class*="docContent"]', '[class*="markdownContent"]', '[class*="doc-content"]',
+    '[class*="page-content"]', '[class*="detail-content"]',
+    '.semi-layout-content', '[class*="layout-content"]',
+    '.book-body section.normal', '.vp-doc', '.theme-doc-markdown',
+    '.md-content__inner', '#main-content',
+    'article', 'main',
+  ];
+  const doc = document;
+  for (const sel of CONTENT_SELECTORS) {
+    const el = doc.querySelector(sel);
+    if (el && el.textContent && el.textContent.trim().length > 50) return sel;
+  }
+  return 'body';
+}
+
 async function waitForReady(
   contentSelector: string,
   timeout: number
 ): Promise<void> {
   const deadline = Date.now() + timeout;
 
-  // Gate 1: Wait for content selector to appear
-  await waitForSelector(contentSelector, deadline);
+  // SPA detection: wait for loading mask to disappear first
+  const loadingMask = document.querySelector('#loading-mask, [class*="loading-spin"], [class*="spin-wrap"], [class*="spinner"]');
+  if (loadingMask) {
+    // Wait for loading indicator to be hidden or removed
+    await waitForHiddenOrRemoved(loadingMask, deadline);
+  }
 
-  // Gate 2: Wait for DOM to stabilize (no mutations for 200ms)
+  // Gate 1: Wait for content selector to have real content
+  await waitForContent(contentSelector, deadline);
+
+  // Gate 2: Wait for DOM to stabilize
   await waitForDomStable(200, deadline);
+}
+
+function waitForHiddenOrRemoved(el: Element, deadline: number): Promise<void> {
+  return new Promise((resolve) => {
+    if (!el.isConnected) { resolve(); return; }
+    const style = getComputedStyle(el);
+    if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) {
+      resolve();
+      return;
+    }
+
+    const check = () => {
+      if (Date.now() > deadline || !el.isConnected || (el as HTMLElement).offsetParent === null) {
+        observer.disconnect();
+        resolve();
+      }
+    };
+
+    const observer = new MutationObserver(check);
+    observer.observe(el.parentElement || document.body, { childList: true, attributes: true, subtree: true });
+    setTimeout(check, remaining(deadline) || 30000);
+  });
+}
+
+function remaining(deadline: number): number {
+  return Math.max(0, deadline - Date.now());
+}
+
+function waitForContent(selector: string, deadline: number): Promise<void> {
+  return new Promise((resolve) => {
+    const check = () => {
+      const el = document.querySelector(selector);
+      if (el && el.textContent && el.textContent.trim().length > 50) {
+        resolve();
+        return;
+      }
+      if (Date.now() > deadline) {
+        resolve();
+        return;
+      }
+      setTimeout(check, 200);
+    };
+    check();
+  });
 }
 
 function waitForSelector(selector: string, deadline: number): Promise<void> {

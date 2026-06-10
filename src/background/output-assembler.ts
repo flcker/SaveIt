@@ -129,6 +129,8 @@ function extractBodyContent(doc: Document): string {
   // Try content selectors in priority order
   const CONTENT_SELECTORS = [
     // TAL Cloud / Semi Design docs
+    '.semi-layout-content',
+    '[class*="layout-content"]',
     '[class*="rightWrap"]',
     '[class*="right-wrap"]',
     '[class*="rightContent"]',
@@ -137,9 +139,6 @@ function extractBodyContent(doc: Document): string {
     '[class*="doc-content"]',
     '[class*="page-content"]',
     '[class*="detail-content"]',
-    '.semi-layout-content [class*="content"]',
-    'aside + div',
-    'aside ~ div:not([class*="toc"])',
     // GitBook (old)
     '.book-body section.normal',
     '.book-body .page-inner section',

@@ -166,8 +166,8 @@ async function runCrawlLoop() {
         // Navigate to page
         await navigateTab(url);
 
-        // Capture content
-        const snapshot = await captureTabContent('body', 10000);
+        // Capture content — body selector triggers smarter SPA detection in content script
+        const snapshot = await captureTabContent('body', 30000);
 
         // Process with page-capture
         const result = await saveCurrentPage(snapshot.html, snapshot.url, {
