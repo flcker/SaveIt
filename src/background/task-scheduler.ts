@@ -8,12 +8,12 @@ export function getCurrentTask(): CrawlTask | null {
   return currentTask;
 }
 
-export function createTask(rootUrl: string, selectedUrls: string[]): CrawlTask {
+export function createTask(rootUrl: string, selectedUrls: string[], navTree?: NavNode[]): CrawlTask {
   const task: CrawlTask = {
     id: generateId(),
     rootUrl,
     status: 'crawling',
-    navTree: [],
+    navTree: navTree || [],
     queue: [...selectedUrls],
     completed: {},
     failed: {},

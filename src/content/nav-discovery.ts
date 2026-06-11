@@ -53,7 +53,9 @@ export async function discoverNavigation(): Promise<{
     try {
       const nodes = await adapter.getNavTree();
       logs.push({ adapter: adapter.name, detected: true, nodeCount: nodes.length });
+      console.log(`[SaveIt] ${adapter.name}: ${nodes.length} nodes, depths:`, [...new Set(nodes.map(n => n.depth))].sort());
       if (nodes.length > 0) {
+        console.log(`[SaveIt] Using ${adapter.name}, returning ${nodes.length} nodes`);
         return { nodes, source: adapter.name, logs };
       }
     } catch (err) {

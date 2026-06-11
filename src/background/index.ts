@@ -1,4 +1,5 @@
 import type { SaveItMessage } from '@/shared/messages';
+import type { NavNode } from '@/shared/types';
 import { saveCurrentPage } from './page-capture';
 import { fetchRobotsTxt, isUrlAllowed, getCrawlDelay } from './robots-txt';
 
@@ -30,8 +31,12 @@ if (api.browserAction) {
     api.sidebarAction.toggle();
   });
 } else if ((api as any).action) {
-  (api as any).action.onClicked.addListener(() => {
-    (api as any).sidePanel.open({ windowId: undefined });
+  (api as any).action.onClicked.addListener(async (tab: any) => {
+    try {
+      await (api as any).sidePanel.open({ tabId: tab.id });
+    } catch {
+      await (api as any).sidePanel.open({});
+    }
   });
 }
 
@@ -46,7 +51,7 @@ api.runtime.onMessage.addListener(
         return true;
 
       case 'popup.startCrawl':
-        handleStartCrawl(message.selectedUrls).then(
+        handleStartCrawl(message.selectedUrls, message.navTree).then(
           () => sendResponse({ success: true }),
           (err) => sendResponse({ success: false, error: String(err) })
         );
@@ -115,11 +120,11 @@ async function handleSavePage() {
   }
 }
 
-async function handleStartCrawl(selectedUrls: string[]) {
+async function handleStartCrawl(selectedUrls: string[], navTree?: NavNode[]) {
   const tabs = await api.tabs.query({ active: true, currentWindow: true });
   const rootUrl = tabs[0]?.url || '';
 
-  createTask(rootUrl, selectedUrls);
+  createTask(rootUrl, selectedUrls, navTree);
   runCrawlLoop();
 }
 
@@ -230,8 +235,20 @@ async function finalizeCrawl() {
   }
 
   try {
+    // Load navTree from storage as fallback (sidebar persists it on discovery)
+    let navTree = task.navTree;
+    console.log('[SaveIt] finalize: task.navTree len:', task.navTree?.length || 0);
+    if (!navTree || navTree.length === 0) {
+      const stored = await api.storage.local.get('saveit_navtree');
+      console.log('[SaveIt] finalize: storage navTree?', !!stored.saveit_navtree, 'len:', stored.saveit_navtree?.length || 0);
+      if (stored.saveit_navtree && Array.isArray(stored.saveit_navtree)) {
+        navTree = stored.saveit_navtree;
+      }
+    }
+    console.log('[SaveIt] finalize: final navTree len:', navTree?.length || 0, 'pages:', Object.keys(task.completed).length);
+
     const { assembleMergedHtml } = await import('./output-assembler');
-    const mergedHtml = assembleMergedHtml(pages, task.navTree);
+    const mergedHtml = assembleMergedHtml(pages, navTree);
     const hostname = new URL(task.rootUrl).hostname;
     const date = new Date().toISOString().slice(0, 10);
     const filename = `${hostname}_${date}.html`;

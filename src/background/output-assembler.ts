@@ -27,9 +27,22 @@ export function assembleMergedHtml(pages: CapturedPage[], navTree?: NavNode[]): 
   }
 
   // Build TOC HTML from navTree (if available), preserving hierarchy
-  const tocHtml = navTree
-    ? renderTocTree(navTree, slugs)
-    : renderTocFlat(processedPages, slugs);
+  let tocHtml: string;
+  console.log('[SaveIt] assemble: navTree?', !!navTree, 'len:', navTree?.length || 0, 'pages:', pages.length);
+  if (navTree && navTree.length > 0) {
+    console.log('[SaveIt] navTree sample:', navTree.slice(0,3).map(n => ({title:n.title, depth:n.depth, children:n.children.length, url:n.url.substring(0,60)})));
+    console.log('[SaveIt] slugs sample:', [...slugs.entries()].slice(0,3).map(([k,v]) => `${k.substring(0,60)} → ${v}`));
+    tocHtml = renderTocTree(navTree, slugs);
+    console.log('[SaveIt] tocTree links:', (tocHtml.match(/data-page=/g) || []).length);
+    // If tree rendering produced no links, fall back to flat
+    if (!tocHtml.includes('data-page=')) {
+      tocHtml = renderTocFlat(processedPages, slugs);
+      console.log('[SaveIt] fallback to flat TOC');
+    }
+  } else {
+    tocHtml = renderTocFlat(processedPages, slugs);
+    console.log('[SaveIt] flat TOC, links:', processedPages.length);
+  }
 
   // Rewrite internal links to #page-{slug} anchors
   for (const page of processedPages) {
@@ -245,7 +258,34 @@ function deduplicateDataUris(
   return { sharedVars, processedStyles };
 }
 
+// Convert flat NavNode[] (with depth) into a tree (with children)
+function flatToTree(nodes: NavNode[]): NavNode[] {
+  const root: NavNode[] = [];
+  const stack: NavNode[] = [];
+  let prevDepth = -1;
+
+  for (const node of nodes) {
+    const treeNode: NavNode = { ...node, children: [] };
+    while (stack.length > 0 && stack[stack.length - 1].depth >= treeNode.depth) {
+      stack.pop();
+    }
+    if (stack.length === 0) {
+      root.push(treeNode);
+    } else {
+      stack[stack.length - 1].children.push(treeNode);
+    }
+    stack.push(treeNode);
+    prevDepth = treeNode.depth;
+  }
+  return root;
+}
+
 function renderTocTree(nodes: NavNode[], slugs: Map<string, string>): string {
+  // If nodes are flat (no children), convert to tree by depth
+  if (nodes.length > 0 && nodes.every(n => n.children.length === 0)) {
+    nodes = flatToTree(nodes);
+  }
+
   // Build URL normalization helpers
   const norm = (url: string) => {
     return url.replace(/\/$/, '').replace(/\.html?$/, '');

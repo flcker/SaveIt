@@ -95,6 +95,7 @@ function App() {
       }
 
       setNavTree(nodes);
+      api.storage.local.set({ saveit_navtree: nodes });
       setStatus('previewing');
       setMessage(`发现 ${countNodes(nodes)} 个页面`);
     } catch (err) {
@@ -121,6 +122,7 @@ function App() {
       await api.runtime.sendMessage({
         type: 'popup.startCrawl',
         selectedUrls: selected,
+        navTree: navTree(),
       });
     } catch (err) {
       setStatus('error');

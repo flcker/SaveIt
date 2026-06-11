@@ -95,6 +95,8 @@ function App() {
       }
 
       setNavTree(nodes);
+      // Persist to storage so background can use it for TOC generation
+      api.storage.local.set({ saveit_navtree: nodes });
       setStatus('previewing');
       setMessage(`发现 ${countNodes(nodes)} 个页面`);
     } catch (err) {
@@ -121,6 +123,7 @@ function App() {
       await api.runtime.sendMessage({
         type: 'popup.startCrawl',
         selectedUrls: selected,
+        navTree: navTree(),
       });
     } catch (err) {
       setStatus('error');

@@ -3,7 +3,7 @@ import type { NavNode, CapturedPage, CrawlTask, SaveOptions } from './types';
 export type SaveItMessage =
   | { type: 'popup.savePage' }
   | { type: 'popup.startDiscover' }
-  | { type: 'popup.startCrawl'; selectedUrls: string[] }
+  | { type: 'popup.startCrawl'; selectedUrls: string[]; navTree: NavNode[] }
   | { type: 'popup.pauseCrawl' }
   | { type: 'popup.cancelCrawl' }
   | { type: 'content.getSnapshot' }
