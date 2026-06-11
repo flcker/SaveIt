@@ -231,7 +231,7 @@ async function finalizeCrawl() {
 
   try {
     const { assembleMergedHtml } = await import('./output-assembler');
-    const mergedHtml = assembleMergedHtml(pages);
+    const mergedHtml = assembleMergedHtml(pages, task.navTree);
     const hostname = new URL(task.rootUrl).hostname;
     const date = new Date().toISOString().slice(0, 10);
     const filename = `${hostname}_${date}.html`;

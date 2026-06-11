@@ -1,6 +1,6 @@
-import type { CapturedPage } from '@/shared/types';
+import type { CapturedPage, NavNode } from '@/shared/types';
 
-export function assembleMergedHtml(pages: CapturedPage[]): string {
+export function assembleMergedHtml(pages: CapturedPage[], navTree?: NavNode[]): string {
   const parser = new DOMParser();
   const slugs = new Map<string, string>();
   const processedPages: Array<{
@@ -26,6 +26,11 @@ export function assembleMergedHtml(pages: CapturedPage[]): string {
     processedPages.push({ slug, title: page.title || page.navTitle, styles, body });
   }
 
+  // Build TOC HTML from navTree (if available), preserving hierarchy
+  const tocHtml = navTree
+    ? renderTocTree(navTree, slugs)
+    : renderTocFlat(processedPages, slugs);
+
   // Rewrite internal links to #page-{slug} anchors
   for (const page of processedPages) {
     page.body = rewriteInternalLinks(page.body, slugs);
@@ -37,7 +42,7 @@ export function assembleMergedHtml(pages: CapturedPage[]): string {
   );
 
   // Build final HTML
-  return buildMergedDocument(processedPages, processedStyles, sharedVars);
+  return buildMergedDocument(processedPages, processedStyles, sharedVars, tocHtml);
 }
 
 function urlToSlug(url: string, existing: Map<string, string>): string {
@@ -240,17 +245,50 @@ function deduplicateDataUris(
   return { sharedVars, processedStyles };
 }
 
+function renderTocTree(nodes: NavNode[], slugs: Map<string, string>): string {
+  // Build URL normalization helpers
+  const norm = (url: string) => {
+    return url.replace(/\/$/, '').replace(/\.html?$/, '');
+  };
+  const urlToSlug = new Map<string, string>();
+  for (const [url, slug] of slugs) {
+    urlToSlug.set(norm(url), slug);
+    urlToSlug.set(url, slug);
+  }
+
+  function render(nodes: NavNode[]): string {
+    if (!nodes || nodes.length === 0) return '';
+    let html = '<ul>\n';
+    for (const node of nodes) {
+      const slug = urlToSlug.get(norm(node.url)) || urlToSlug.get(node.url);
+      if (slug) {
+        html += `<li><a href="#page-${slug}" data-page="${slug}">${escapeHtml(node.title)}</a>`;
+      } else if (node.children.length > 0) {
+        html += `<li><span class="saveit-toc-group">${escapeHtml(node.title)}</span>`;
+      } else {
+        html += `<li><span>${escapeHtml(node.title)}</span>`;
+      }
+      html += render(node.children);
+      html += '</li>\n';
+    }
+    html += '</ul>\n';
+    return html;
+  }
+  return render(nodes);
+}
+
+function renderTocFlat(pages: Array<{ slug: string; title: string }>, slugs: Map<string, string>): string {
+  return '<ul>\n' + pages
+    .map((p) => `      <li><a href="#page-${p.slug}" data-page="${p.slug}">${escapeHtml(p.title)}</a></li>`)
+    .join('\n') + '\n    </ul>';
+}
+
 function buildMergedDocument(
   pages: Array<{ slug: string; title: string; body: string }>,
   styles: string[],
-  sharedVars: string
+  sharedVars: string,
+  tocHtml?: string
 ): string {
-  const tocItems = pages
-    .map(
-      (p) =>
-        `      <li><a href="#page-${p.slug}" data-page="${p.slug}">${escapeHtml(p.title)}</a></li>`
-    )
-    .join('\n');
 
   const articles = pages
     .map(
@@ -284,9 +322,7 @@ ${pageStyles}
       <h2>目录</h2>
       <button id="saveit-toc-toggle" aria-label="Toggle TOC">☰</button>
     </div>
-    <ul>
-${tocItems}
-    </ul>
+${tocHtml || '<ul></ul>'}
   </nav>
 
   <main id="saveit-content">
@@ -369,6 +405,22 @@ const SAVEIT_UI_CSS = `
       background: #dbeafe;
       color: #1d4ed8;
       font-weight: 500;
+    }
+    #saveit-toc ul ul { padding-left: 12px; }
+    #saveit-toc ul ul ul { padding-left: 12px; }
+    .saveit-toc-group {
+      display: block;
+      padding: 6px 10px;
+      font-weight: 600;
+      color: #334155;
+      font-size: 12px;
+      text-transform: none;
+    }
+    #saveit-toc li > span {
+      display: block;
+      padding: 4px 10px;
+      color: #94a3b8;
+      font-size: 12px;
     }
     #saveit-content {
       flex: 1;
